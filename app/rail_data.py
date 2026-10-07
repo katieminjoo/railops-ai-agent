@@ -35,10 +35,10 @@ def get_trains(crs, destination_name) :
     for train in train_services:
         destination_ = train['destination']
         destination = destination_[0]['locationName']
-        scheduled = train['sta']
-        estimated = train['eta']
-        platform = train['platform']
-        cancelled = train['isCancelled']
+        scheduled = train.get('sta', 'Unknown')
+        estimated = train.get('eta', 'Unknown')
+        platform = train.get('platform', 'Unknown')
+        cancelled = train.get('isCancelled', 'Unknown')
 
         if destination == destination_name :
             results.append({

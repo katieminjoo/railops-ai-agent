@@ -5,10 +5,10 @@ from pydantic import BaseModel
 from rail_data import get_trains
 import json
 
-class Decision(BaseModel):
-    status : str
-    recommended_action : str
-    reason : str
+# class Decision(BaseModel):
+#     status : str
+#     recommended_action : str
+#     reason : str
 
 load_dotenv()
 
@@ -57,35 +57,48 @@ tools = [
 response = client.responses.create(
     model = "gpt-5.4-mini",
     input = "What are the next trains from Woking to London Waterloo?",
+    # input = 'Hello, my name is Minjoo',
     tools = tools
 )
 
-tool_call = response.output[0]
+while True :
+    if response.output[0].type == 'function_call' :
+        tool_call = response.output[0]
+        
+        arguments_json = tool_call.arguments
+        arguments = json.loads(arguments_json)
 
-arguments_json = tool_call.arguments
-arguments = json.loads(arguments_json)
+        if tool_call.name == 'get_trains':
+            crs = arguments['crs']
+            destination = arguments['destination_name']
+            # get_train execute
+            tool_result = get_trains(crs, destination)
 
-crs = arguments['crs']
-destination = arguments['destination_name']
+        # call_id & train_results in json
+        call_id = tool_call.call_id
+        tool_result_json = json.dumps(tool_result)
 
-train_results = get_trains(crs, destination)
-# print(train_results)
+        # Back to LLM to create an answer in natural language
+        response = client.responses.create(
+            model = 'gpt-5.4-mini',
+            previous_response_id= response.id,
+            input = [
+                {
+                    'type' : 'function_call_output',
+                    'call_id' : call_id,
+                    'output' : tool_result_json,
+                }
+            ],
+            tools = tools
+        )
 
-call_id = tool_call.call_id
-train_results_json = json.dumps(train_results)
+    else:
+        print(response.output_text)
+        break
 
-# Back to LLM
-final_response = client.responses.create(
-    model = 'gpt-5.4-mini',
-    previous_response_id= response.id,
-    input = [
-        {
-            'type' : 'function_call_output',
-            'call_id' : call_id,
-            'output' : train_results_json,
-        }
-    ],
-    tools = tools
-)
 
-print(final_response.output_text)
+# print(response)
+# print(response.output)
+
+
+
