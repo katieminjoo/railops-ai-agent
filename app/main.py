@@ -3,6 +3,7 @@ from dotenv import load_dotenv
 from openai import OpenAI
 from pydantic import BaseModel
 from rail_data import get_trains
+from station_data import get_station_code
 import json
 
 # class Decision(BaseModel):
@@ -34,6 +35,7 @@ client = OpenAI(api_key = api_key)
 # print('Action :', decision.recommended_action)
 # print('Reason :', decision.reason)
 
+# explain what tool we have (schema)
 tools = [
     {
         "type" : "function",
@@ -51,50 +53,85 @@ tools = [
             },
             "required" : ["crs", "destination_name"]
         }
-    }
+    },
+    {
+            "type" : "function",
+            "name" : "get_station_code",
+            "description" : "Find a railway station's CRS code using official CORPUS reference data",
+            "parameters" : {
+                "type" : "object",
+                "properties" : {
+                    "station_name" : {
+                        "type" : "string"
+                    }
+                },
+                "required" : ["station_name"]
+            }
+        }
+
 ]
 
 response = client.responses.create(
     model = "gpt-5.4-mini",
     input = "What are the next trains from Woking to London Waterloo?",
+    # input = "What is the CSR code for Woking?",
     # input = 'Hello, my name is Minjoo',
     tools = tools
 )
 
 while True :
-    if response.output[0].type == 'function_call' :
-        tool_call = response.output[0]
-        
-        arguments_json = tool_call.arguments
-        arguments = json.loads(arguments_json)
+    tool_outputs = []
 
-        if tool_call.name == 'get_trains':
-            crs = arguments['crs']
-            destination = arguments['destination_name']
-            # get_train execute
-            tool_result = get_trains(crs, destination)
+    for output in response.output :
+        if output.type == "function_call":
+    # if response.output[0].type == 'function_call' :
+            tool_call = output
+            print("tool called :", tool_call.name)
+            
+            arguments_json = tool_call.arguments
+            arguments = json.loads(arguments_json)
 
-        # call_id & train_results in json
-        call_id = tool_call.call_id
-        tool_result_json = json.dumps(tool_result)
+            if tool_call.name == 'get_trains':
+                crs = arguments['crs']
+                destination = arguments['destination_name']
+                # get_train execute
+                tool_result = get_trains(crs, destination)
 
-        # Back to LLM to create an answer in natural language
-        response = client.responses.create(
-            model = 'gpt-5.4-mini',
-            previous_response_id= response.id,
-            input = [
-                {
-                    'type' : 'function_call_output',
-                    'call_id' : call_id,
-                    'output' : tool_result_json,
-                }
-            ],
-            tools = tools
-        )
+            elif tool_call.name == 'get_station_code':
+                station_name = arguments['station_name']
+                #execute
+                tool_result = get_station_code(station_name)
 
-    else:
+            else:
+                raise ValueError(f"unknown tool: {tool_call.name}")
+
+            # call_id & train_results in json
+            tool_result_json = json.dumps(tool_result)
+
+            tool_outputs.append({
+                'type' : 'function_call_output',
+                'call_id' : tool_call.call_id,
+                'output' : tool_result_json
+            })
+
+    if not tool_outputs:
         print(response.output_text)
         break
+
+    # Back to LLM to create an answer in natural language
+    response = client.responses.create(
+        model = 'gpt-5.4-mini',
+        previous_response_id= response.id,
+        input = tool_outputs,
+            # input = [
+            #     {
+            #         'type' : 'function_call_output',
+            #         'call_id' : call_id,
+            #         'output' : tool_result_json,
+            #     }
+            # ],
+        tools = tools
+        )
 
 
 # print(response)
