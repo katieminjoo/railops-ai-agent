@@ -5,11 +5,15 @@ from pydantic import BaseModel
 from rail_data import get_trains
 from station_data import get_station_code
 import json
+from typing import Literal
 
-# class Decision(BaseModel):
-#     status : str
-#     recommended_action : str
-#     reason : str
+class TrainStatus(BaseModel):
+    scheduled : str
+    status : Literal["on_time", "delayed", "cancelled", "unknown"]
+class Decision(BaseModel):
+    trains : list[TrainStatus]
+    recommended_action : str
+    reason : str
 
 load_dotenv()
 
@@ -71,12 +75,14 @@ tools = [
 
 ]
 
-response = client.responses.create(
+response = client.responses.parse(
     model = "gpt-5.4-mini",
     input = "What are the next trains from Woking to London Waterloo?",
+    # input="What is the CRS code for ABCDEF station?",
     # input = "What is the CSR code for Woking?",
     # input = 'Hello, my name is Minjoo',
-    tools = tools
+    tools = tools,
+    text_format= Decision
 )
 
 while True :
@@ -102,6 +108,9 @@ while True :
                 #execute
                 tool_result = get_station_code(station_name)
 
+                if tool_result is None :
+                    tool_result = {'error' : 'Station not found'}
+
             else:
                 raise ValueError(f"unknown tool: {tool_call.name}")
 
@@ -115,11 +124,17 @@ while True :
             })
 
     if not tool_outputs:
-        print(response.output_text)
+        decision = response.output_parsed
+        print("Trains:")
+        for train in decision.trains:
+            print(train.scheduled, "-", train.status)
+        print("Recommended Action:", decision.recommended_action)
+        print("Reason :", decision.reason)
+        # print(response.output_text)
         break
 
     # Back to LLM to create an answer in natural language
-    response = client.responses.create(
+    response = client.responses.parse(
         model = 'gpt-5.4-mini',
         previous_response_id= response.id,
         input = tool_outputs,
@@ -130,7 +145,8 @@ while True :
             #         'output' : tool_result_json,
             #     }
             # ],
-        tools = tools
+        tools = tools,
+        text_format = Decision
         )
 
 

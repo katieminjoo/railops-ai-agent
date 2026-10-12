@@ -3,7 +3,7 @@ import xml.etree.ElementTree as ET
 tree = ET.parse('./data/NLC20261002.xml')
 root = tree.getroot()
 
-print(root.tag)
+# print(root.tag)
 
 ns = {
     'ns2' : 'http://tempuri.org/XMLSchema.xsd'
@@ -36,4 +36,6 @@ def get_station_code(station_name) :
 
     return None
 
-print(get_station_code("WoKiNg"))
+# print(get_station_code("WoKiNg"))
+if __name__ == "__main__":
+    print(get_station_code("Woking"))

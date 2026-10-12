@@ -12,19 +12,20 @@ def get_trains(crs, destination_name) :
     # crs = 'WOK'
 
     url = f'https://api1.raildata.org.uk/1010-live-arrival-board-arr/LDBWS/api/20220120/GetArrBoardWithDetails/{crs}'
+    # url =  "https://api1.raildata.org.uk/invalid-test-endpoint"
 
     headers = {
         'User-Agent' : "",
         'x-apikey' : api_key
     }
     # print("RailData API key loaded:", bool(api_key))
-
-    response = requests.get(url, headers=headers)
-
-    # print('status code :', response.status_code)
-    # print(response.text[:1000])
-
-    data = response.json()
+    try:
+        response = requests.get(url, headers=headers, timeout = 10)
+        response.raise_for_status()
+        data = response.json()
+    except requests.exceptions.RequestException as e :
+        print('API request failed', e)
+        return{"error" : "Failed to retrieve train data"}
     # print(type(data))
     # print(data.keys())
 
