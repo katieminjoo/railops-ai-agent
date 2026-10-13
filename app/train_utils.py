@@ -13,13 +13,31 @@ def calculate_delay(scheduled, estimated):
     except ValueError:
         return None
 
+def get_train_status(scheduled, estimated) :
+    if estimated == "Cancelled" :
+        return "cancelled"
+    elif estimated == "On time" :
+        return "on_time"
+    elif estimated == "Delayed" :
+        return "delayed"
+    else:
+        delay_minutes = calculate_delay(scheduled, estimated)
+        if delay_minutes is None :
+            return "unknown"
+        elif delay_minutes > 0 :
+            return "delayed"
+        else:
+            return "on_time"
+
 
 # if __name__ == "__main__":
 #     result = calculate_delay("18:28", "18:36")
 #     print(result)
 
 if __name__ == "__main__":
-    print(calculate_delay("18:28", "18:36"))
-    print(calculate_delay("18:28", "On time"))
-    print(calculate_delay("18:28", "Delayed"))
-    print(calculate_delay("18:28", "Cancelled"))
+    print(get_train_status("18:28", "18:36"))
+    print(get_train_status("18:28", "18:28"))
+    print(get_train_status("18:28", "On time"))
+    print(get_train_status("18:28", "Cancelled"))
+    print(get_train_status("18:28", "Delayed"))
+    print(get_train_status("18:28", "Unknown"))
