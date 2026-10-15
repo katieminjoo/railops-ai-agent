@@ -1,7 +1,7 @@
 import os
 import requests
 from dotenv import load_dotenv
-from train_utils import calculate_delay, get_train_status
+from app.train_utils import calculate_delay, get_train_status
 
 
 def get_trains(crs, destination_name) :
@@ -43,7 +43,7 @@ def get_trains(crs, destination_name) :
 
         if destination == destination_name :
             delay_minutes = calculate_delay(scheduled, estimated)
-            status = get_train_status(scheduled, estimated)
+            status = get_train_status(scheduled, estimated, cancelled)
 
             results.append({
                 
