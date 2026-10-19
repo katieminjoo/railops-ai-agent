@@ -35,3 +35,14 @@ def test_get_trains_connection_error():
         result = get_trains("WOK", "London Waterloo")
 
         assert result == {"error" : "Failed to retrieve train data"}
+
+def test_get_trains_empty_services():
+    fake_response = Mock()
+    fake_response.json.return_value = {"trainServices" : []}
+
+    with patch("app.rail_data.requests.get") as mock_get:
+        mock_get.return_value = fake_response
+
+        result = get_trains("WOK", "London Waterloo")
+
+        assert result == []
